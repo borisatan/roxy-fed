@@ -1,12 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="bg">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f4f5f7">
 <meta name="robots" content="noindex, nofollow">
-<title>Roxy</title>
+<title>Рокси</title>
 <style>
   :root {
     --bg:#f4f5f7; --card:#fff; --fg:#101418; --muted:#6b7280; --line:#e6e8ec;
@@ -15,16 +15,6 @@
     --err:#b91c1c;  --err-soft:#fee2e2;  --err-line:#fca5a5;
     --idle:#5b6472; --idle-dot:#cfd4dc;
     --shadow:0 1px 2px rgba(16,20,24,.05), 0 8px 24px rgba(16,20,24,.06);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg:#0f1216; --card:#171b21; --fg:#eef1f5; --muted:#98a1af; --line:#262c35;
-      --fed:#4ade80; --fed-soft:#14301f; --fed-dot:#22c55e;
-      --warn:#fbbf24; --warn-soft:#33260a; --warn-dot:#f59e0b; --warn-line:#7c5c11;
-      --err:#fca5a5;  --err-soft:#3a1516;  --err-line:#7f2b2b;
-      --idle:#98a1af; --idle-dot:#39414d;
-      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
-    }
   }
 
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
@@ -58,7 +48,7 @@
     margin-left:auto; flex:none; align-self:center;
     background:transparent; border:1px solid currentColor; color:inherit;
     border-radius:999px; padding:7px 15px; font:inherit; font-size:.88rem; font-weight:600;
-    cursor:pointer;
+    cursor:pointer; white-space:nowrap;
   }
   .banner .retry:active { opacity:.6; }
 
@@ -75,16 +65,19 @@
   .status { transition:opacity .18s ease; }
   .status.stale { opacity:.45; }
 
+  /* Sized for Bulgarian: "Не е хранена" is twice the length of "Not fed",
+     so this runs smaller than the English original and may wrap to two lines. */
   .headline {
-    font-size:clamp(3.1rem, 17vw, 4.2rem); font-weight:800;
-    letter-spacing:-.035em; line-height:1; margin:0;
+    font-size:clamp(2.2rem, 11vw, 3.2rem); font-weight:800;
+    letter-spacing:-.03em; line-height:1.04; margin:0;
+    overflow-wrap:break-word; text-wrap:balance;
   }
   .headline.is-fed  { color:var(--fed); }
   .headline.is-idle { color:var(--idle); }
   .headline.is-err  { color:var(--muted); }
   .headline.is-warn { color:var(--warn); }
 
-  .sub1 { margin-top:14px; font-size:1.32rem; font-weight:650; letter-spacing:-.01em; }
+  .sub1 { margin-top:14px; font-size:1.3rem; font-weight:650; letter-spacing:-.01em; }
   .sub2 { margin-top:4px; font-size:1rem; color:var(--muted); }
 
   .pulse { animation:pulse 1.4s ease-in-out infinite; }
@@ -93,9 +86,9 @@
   /* ---------- actions ---------- */
   .actions { margin-top:28px; }
   .btn {
-    display:block; width:100%; min-height:68px;
+    display:block; width:100%; min-height:68px; padding:12px 16px;
     border:none; border-radius:19px; cursor:pointer;
-    font:inherit; font-size:1.22rem; font-weight:700; letter-spacing:-.01em;
+    font:inherit; font-size:1.16rem; font-weight:700; letter-spacing:-.01em;
     color:#fff; background:var(--fed-dot);
     transition:transform .1s ease, opacity .15s ease;
   }
@@ -104,7 +97,7 @@
   .btn-warn { background:var(--warn-dot); }
   .btn-ghost {
     background:transparent; color:var(--muted);
-    border:1px solid var(--line); min-height:56px; font-size:1.05rem; font-weight:600;
+    border:1px solid var(--line); min-height:56px; font-size:1.02rem; font-weight:600;
   }
 
   .linkish {
@@ -131,7 +124,7 @@
   }
   .confirm p { margin:0 0 16px; font-size:1.02rem; line-height:1.45; color:var(--warn); font-weight:550; }
   .confirm p b { font-weight:800; }
-  .confirm .btn { min-height:58px; font-size:1.08rem; }
+  .confirm .btn { min-height:58px; font-size:1.05rem; }
   .confirm .btn-ghost { margin-top:9px; }
 
   /* ---------- history ---------- */
@@ -142,20 +135,16 @@
   }
   .dots { display:flex; justify-content:space-between; gap:6px; }
   .day { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; }
-  .dot {
-    width:19px; height:19px; border-radius:50%;
-    background:var(--idle-dot);
-  }
+  .dot { width:19px; height:19px; border-radius:50%; background:var(--idle-dot); }
   .dot.one  { background:var(--fed-dot); }
   .dot.many { background:var(--warn-dot); box-shadow:0 0 0 4px var(--warn-soft); }
   .dot.today { outline:2px solid var(--fg); outline-offset:3px; }
-  .dname { font-size:.74rem; font-weight:600; color:var(--muted); }
+  .dname { font-size:.73rem; font-weight:600; color:var(--muted); }
 
   .foot { margin-top:18px; text-align:center; font-size:.78rem; color:var(--muted); opacity:.8; }
 
   .plain { text-align:center; padding:64px 20px; color:var(--muted); }
   .plain h1 { font-size:1.35rem; color:var(--fg); margin:0 0 10px; }
-  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 </style>
 </head>
 <body>
@@ -167,6 +156,10 @@
 
   var SUPABASE_URL = "https://dckgfwievtugvllxseue.supabase.co";
   var ANON_KEY     = "sb_publishable_2h5zLJJhtaLGCrSvgyNAcQ_QLf_gOm8";
+
+  // Pinned rather than taken from the phone, so the page reads the same on
+  // every device: 24-hour clock and Bulgarian weekday labels.
+  var LOCALE = "bg-BG";
 
   var TOKEN = new URLSearchParams(location.search).get("d");
   var app = document.getElementById("app");
@@ -279,7 +272,7 @@
       .catch(function () {
         S.busy = false;
         // The write is unconfirmed, so it must not be shown as done.
-        S.flash = { kind: "err", text: "Not recorded — couldn’t reach the server." };
+        S.flash = { kind: "err", text: "Не е записано — няма връзка със сървъра." };
         unreachable();
         render();
       });
@@ -293,12 +286,12 @@
         S.busy = false;
         if (!accept(res)) return;
         if (res.action === "undone") S.undo = null;
-        else S.flash = { kind: "muted", text: "Too late to undo that." };
+        else S.flash = { kind: "muted", text: "Твърде късно е за отмяна." };
         render();
       })
       .catch(function () {
         S.busy = false;
-        S.flash = { kind: "err", text: "Couldn't undo — no connection." };
+        S.flash = { kind: "err", text: "Неуспешна отмяна — няма връзка." };
         unreachable();
         render();
       });
@@ -313,40 +306,44 @@
 
   function clock(iso) {
     try {
-      return new Intl.DateTimeFormat(undefined, {
+      return new Intl.DateTimeFormat(LOCALE, {
         hour: "numeric", minute: "2-digit", timeZone: tz()
       }).format(new Date(iso));
     } catch (e) { return new Date(iso).toTimeString().slice(0, 5); }
   }
 
+  // Bulgarian puts "преди" in front rather than "ago" behind, and counts
+  // with the plural form: 1 минута / 2 минути, 1 час / 2 часа, 1 ден / 2 дни.
   function ago(iso) {
     var m = Math.round((now() - new Date(iso).getTime()) / 60000);
-    if (m < 1) return "just now";
-    if (m === 1) return "1 minute ago";
-    if (m < 60) return m + " minutes ago";
+    if (m < 1) return "току-що";
+    if (m === 1) return "преди 1 минута";
+    if (m < 60) return "преди " + m + " минути";
     var h = Math.floor(m / 60), r = m % 60;
-    if (h < 24) return h + (h === 1 ? " hour" : " hours") + (r ? " " + r + " min" : "") + " ago";
-    return Math.floor(h / 24) + " days ago";
+    if (h < 24) return "преди " + (h === 1 ? "1 час" : h + " часа") + (r ? " и " + r + " мин" : "");
+    var dd = Math.floor(h / 24);
+    return "преди " + (dd === 1 ? "1 ден" : dd + " дни");
   }
 
   function joinTimes(list) {
     var t = list.map(function (f) { return clock(f.at); });
     if (t.length <= 1) return t.join("");
-    return t.slice(0, -1).join(", ") + " and " + t[t.length - 1];
+    return t.slice(0, -1).join(", ") + " и " + t[t.length - 1];
   }
 
   // ---- render ------------------------------------------------------------
   function render() {
     if (S.invalid) {
       app.innerHTML =
-        '<div class="plain"><h1>This link isn’t valid</h1><p>Check the address and try again.</p></div>';
+        '<div class="plain"><h1>Този линк не е валиден</h1>' +
+        "<p>Проверете адреса и опитайте отново.</p></div>";
       return;
     }
     if (S.loading && !S.data) {
       app.innerHTML =
         '<div class="card"><div class="dog">&nbsp;</div>' +
         '<p class="headline is-err pulse">&hellip;</p>' +
-        '<div class="sub2" style="margin-top:16px">Checking&hellip;</div></div>';
+        '<div class="sub2" style="margin-top:16px">Проверява се&hellip;</div></div>';
       return;
     }
 
@@ -364,12 +361,12 @@
     if (!S.reachable) {
       html +=
         '<div class="banner banner-err" role="alert"><span class="ico">⚠️</span>' +
-        '<span><b>Couldn’t reach the server</b>' +
+        "<span><b>Няма връзка със сървъра</b>" +
         '<span class="sub">' +
-        (d ? "Showing the last known answer from " + esc(ago(new Date(S.goodAt + S.skew).toISOString())) + "."
-           : "No information available.") +
+        (d ? "Последна проверка: " + esc(ago(new Date(S.goodAt + S.skew).toISOString())) + "."
+           : "Няма налична информация.") +
         "</span></span>" +
-        '<button class="retry" id="retry">Retry</button></div>';
+        '<button class="retry" id="retry">Опитай пак</button></div>';
     }
     if (S.flash && S.flash.kind === "err") {
       html += '<div class="banner banner-err" role="alert"><span class="ico">✕</span><span>' +
@@ -379,55 +376,55 @@
     // before they add a third.
     if (S.reachable && count > 1) {
       html += '<div class="banner banner-warn" role="alert"><span class="ico">⚠️</span>' +
-              "<span><b>Fed " + count + "× today</b>" +
+              "<span><b>Хранена " + count + "× днес</b>" +
               '<span class="sub">' + esc(joinTimes(feeds)) + "</span></span></div>";
     }
 
     html += '<div class="card">';
-    html += '<div class="dog">' + esc(d ? d.dog_name : " ") + "</div>";
+    html += '<div class="dog">' + esc(d ? d.dog_name : " ") + "</div>";
     html += '<div class="status' + (stale ? " stale" : "") + '" aria-live="polite">';
 
     if (!d) {
       // No data at all + no connection. Say so. Never guess "not fed".
-      html += '<p class="headline is-err">Unknown</p>' +
-              '<div class="sub1">Can’t check right now</div>' +
-              '<div class="sub2">You’re offline or the server is down.</div>';
+      html += '<p class="headline is-err">Неизвестно</p>' +
+              '<div class="sub1">Няма как да се провери</div>' +
+              '<div class="sub2">Няма интернет или сървърът не отговаря.</div>';
     } else if (count > 1) {
-      html += '<p class="headline is-warn">Fed ' + count + "×</p>" +
-              '<div class="sub1">Last at ' + esc(clock(lastAt)) + "</div>" +
+      html += '<p class="headline is-warn">Хранена ' + count + "×</p>" +
+              '<div class="sub1">Последно в ' + esc(clock(lastAt)) + "</div>" +
               '<div class="sub2">' + esc(ago(lastAt)) + "</div>";
     } else if (count === 1) {
-      html += '<p class="headline is-fed">Fed</p>' +
-              '<div class="sub1">at ' + esc(clock(lastAt)) + "</div>" +
+      html += '<p class="headline is-fed">Нахранена</p>' +
+              '<div class="sub1">в ' + esc(clock(lastAt)) + "</div>" +
               '<div class="sub2">' + esc(ago(lastAt)) + "</div>";
     } else {
-      html += '<p class="headline is-idle">Not fed</p>' +
-              '<div class="sub2" style="margin-top:12px">No feeding recorded today</div>';
+      html += '<p class="headline is-idle">Не е хранена</p>' +
+              '<div class="sub2" style="margin-top:12px">Няма записано хранене днес</div>';
     }
     html += "</div>"; // .status
 
     // --- actions ---
     html += '<div class="actions">';
     if (!d) {
-      html += '<button class="btn btn-ghost" id="retry2">Try again</button>';
+      html += '<button class="btn btn-ghost" id="retry2">Опитай отново</button>';
     } else if (S.confirming) {
-      html += '<div class="confirm"><p>' + esc(d.dog_name) + " was fed at <b>" +
+      html += '<div class="confirm"><p>' + esc(d.dog_name) + " е хранена в <b>" +
               esc(clock(lastAt)) + "</b>, " + esc(ago(lastAt)) +
-              ". Record a second feeding?</p>" +
-              '<button class="btn btn-warn" id="confirm">Yes, record it</button>' +
-              '<button class="btn btn-ghost" id="cancel">Cancel</button></div>';
+              ". Да се запише ли второ хранене?</p>" +
+              '<button class="btn btn-warn" id="confirm">Да, запиши го</button>' +
+              '<button class="btn btn-ghost" id="cancel">Отказ</button></div>';
     } else if (count === 0) {
       html += '<button class="btn" id="feed"' + (S.busy ? " disabled" : "") + ">" +
-              (S.busy ? "Saving…" : "Mark as fed") + "</button>";
+              (S.busy ? "Записва се…" : "Отбележи като нахранена") + "</button>";
     } else {
       // Already fed. The primary action is now *nothing* — you have your
       // answer and you walk away. So this is deliberately not button-shaped.
       html += '<button class="linkish" id="again"' + (S.busy ? " disabled" : "") + ">" +
-              "Feed again</button>";
+              "Нахрани отново</button>";
     }
 
     if (S.undo && S.undo.expires > now() && count > 0 && !S.confirming) {
-      html += '<div class="undo-row">Recorded by mistake? <button id="undo">Undo</button></div>';
+      html += '<div class="undo-row">Записано по грешка? <button id="undo">Отмени</button></div>';
     }
     if (S.flash && S.flash.kind === "muted") {
       html += '<div class="undo-row">' + esc(S.flash.text) + "</div>";
@@ -436,7 +433,7 @@
 
     // --- history ---
     if (d && d.days && d.days.length) {
-      html += '<div class="history"><div class="hlabel">Last 7 days</div><div class="dots">';
+      html += '<div class="history"><div class="hlabel">Последните 7 дни</div><div class="dots">';
       d.days.forEach(function (day, i) {
         var c = day.count;
         if (i === d.days.length - 1) c = count;          // today, incl. optimistic
@@ -444,7 +441,7 @@
         var today = i === d.days.length - 1 ? " today" : "";
         var name;
         try {
-          name = new Intl.DateTimeFormat(undefined, { weekday: "narrow", timeZone: tz() })
+          name = new Intl.DateTimeFormat(LOCALE, { weekday: "short", timeZone: tz() })
                    .format(new Date(day.day_start));
         } catch (e) { name = ""; }
         html += '<div class="day"><div class="dot' + cls + today + '"></div>' +
@@ -454,7 +451,7 @@
     }
 
     html += "</div>"; // .card
-    if (d) html += '<div class="foot">Updates automatically</div>';
+    if (d) html += '<div class="foot">Обновява се автоматично</div>';
 
     app.innerHTML = html;
 
@@ -485,7 +482,7 @@
   });
 
   setInterval(function () { if (!document.hidden) load(); }, 60000);
-  // Keep "20 minutes ago" honest without refetching.
+  // Keep "преди 20 минути" honest without refetching.
   tickTimer = setInterval(function () {
     if (!document.hidden && S.data && !S.busy) render();
   }, 30000);

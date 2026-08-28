@@ -207,5 +207,5 @@ grant execute on function public.undo_feed(text, bigint)       to anon;
 -- ============================================================
 
 insert into public.households (token, dog_name, timezone, rollover_hour)
-values (substr(replace(gen_random_uuid()::text, '-', ''), 1, 12), 'Roxy', 'Europe/Berlin', 3)
+values (substr(replace(gen_random_uuid()::text, '-', ''), 1, 12), 'Рокси', 'Europe/Berlin', 3)
 returning token;
