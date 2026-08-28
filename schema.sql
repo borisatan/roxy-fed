@@ -40,7 +40,7 @@ create or replace function public.dog_day_start(
   p_rollover smallint,
   p_at       timestamptz default now()
 ) returns timestamptz
-language sql stable as $$
+language sql stable set search_path = public as $$
   select (date_trunc('day', (p_at at time zone p_tz) - make_interval(hours => p_rollover))
           + make_interval(hours => p_rollover)) at time zone p_tz;
 $$;
@@ -188,6 +188,10 @@ $$;
 -- Grants. Postgres grants EXECUTE to PUBLIC by default,
 -- so the revokes are load-bearing, not decoration.
 -- ============================================================
+
+-- Internal helper: not part of the client API surface.
+revoke execute on function public.dog_day_start(text, smallint, timestamptz)
+  from public, anon, authenticated;
 
 revoke execute on function public.get_status(text)             from public;
 revoke execute on function public.record_feed(text, boolean)   from public;
