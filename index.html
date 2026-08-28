@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
+<meta name="robots" content="noindex, nofollow">
+<title>Roxy</title>
+<style>
+  :root {
+    --bg:#f4f5f7; --card:#fff; --fg:#101418; --muted:#6b7280; --line:#e6e8ec;
+    --fed:#15803d; --fed-soft:#dcfce7; --fed-dot:#22c55e;
+    --warn:#b45309; --warn-soft:#fef3c7; --warn-dot:#f59e0b; --warn-line:#fcd34d;
+    --err:#b91c1c;  --err-soft:#fee2e2;  --err-line:#fca5a5;
+    --idle:#5b6472; --idle-dot:#cfd4dc;
+    --shadow:0 1px 2px rgba(16,20,24,.05), 0 8px 24px rgba(16,20,24,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#0f1216; --card:#171b21; --fg:#eef1f5; --muted:#98a1af; --line:#262c35;
+      --fed:#4ade80; --fed-soft:#14301f; --fed-dot:#22c55e;
+      --warn:#fbbf24; --warn-soft:#33260a; --warn-dot:#f59e0b; --warn-line:#7c5c11;
+      --err:#fca5a5;  --err-soft:#3a1516;  --err-line:#7f2b2b;
+      --idle:#98a1af; --idle-dot:#39414d;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; padding:0; }
+  body {
+    background:var(--bg); color:var(--fg);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size:17px; line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+    padding:
+      calc(env(safe-area-inset-top) + 20px)
+      calc(env(safe-area-inset-right) + 18px)
+      calc(env(safe-area-inset-bottom) + 28px)
+      calc(env(safe-area-inset-left) + 18px);
+    min-height:100vh;
+  }
+  #app { max-width:430px; margin:0 auto; }
+
+  /* ---------- banners ---------- */
+  .banner {
+    display:flex; gap:11px; align-items:flex-start;
+    border-radius:16px; padding:14px 16px; margin-bottom:16px;
+    font-size:.97rem; font-weight:550; line-height:1.35;
+  }
+  .banner .ico { font-size:1.15rem; line-height:1.15; flex:none; }
+  .banner-warn { background:var(--warn-soft); color:var(--warn); border:1px solid var(--warn-line); }
+  .banner-err  { background:var(--err-soft);  color:var(--err);  border:1px solid var(--err-line); }
+  .banner b { font-weight:700; }
+  .banner .sub { display:block; font-weight:450; opacity:.85; margin-top:3px; font-size:.9rem; }
+  .banner .retry {
+    margin-left:auto; flex:none; align-self:center;
+    background:transparent; border:1px solid currentColor; color:inherit;
+    border-radius:999px; padding:7px 15px; font:inherit; font-size:.88rem; font-weight:600;
+    cursor:pointer;
+  }
+  .banner .retry:active { opacity:.6; }
+
+  /* ---------- card ---------- */
+  .card {
+    background:var(--card); border-radius:24px; box-shadow:var(--shadow);
+    padding:30px 24px 24px; text-align:center;
+  }
+  .dog {
+    font-size:.82rem; font-weight:700; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:20px;
+  }
+
+  .status { transition:opacity .18s ease; }
+  .status.stale { opacity:.45; }
+
+  .headline {
+    font-size:clamp(3.1rem, 17vw, 4.2rem); font-weight:800;
+    letter-spacing:-.035em; line-height:1; margin:0;
+  }
+  .headline.is-fed  { color:var(--fed); }
+  .headline.is-idle { color:var(--idle); }
+  .headline.is-err  { color:var(--muted); }
+  .headline.is-warn { color:var(--warn); }
+
+  .sub1 { margin-top:14px; font-size:1.32rem; font-weight:650; letter-spacing:-.01em; }
+  .sub2 { margin-top:4px; font-size:1rem; color:var(--muted); }
+
+  .pulse { animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+  /* ---------- actions ---------- */
+  .actions { margin-top:28px; }
+  .btn {
+    display:block; width:100%; min-height:68px;
+    border:none; border-radius:19px; cursor:pointer;
+    font:inherit; font-size:1.22rem; font-weight:700; letter-spacing:-.01em;
+    color:#fff; background:var(--fed-dot);
+    transition:transform .1s ease, opacity .15s ease;
+  }
+  .btn:active { transform:scale(.975); }
+  .btn[disabled] { opacity:.55; cursor:default; transform:none; }
+  .btn-warn { background:var(--warn-dot); }
+  .btn-ghost {
+    background:transparent; color:var(--muted);
+    border:1px solid var(--line); min-height:56px; font-size:1.05rem; font-weight:600;
+  }
+
+  .linkish {
+    display:inline-block; margin-top:6px; padding:14px 18px;
+    background:none; border:none; cursor:pointer;
+    font:inherit; font-size:.97rem; color:var(--muted);
+    text-decoration:underline; text-decoration-color:var(--line);
+    text-underline-offset:4px;
+  }
+  .linkish:active { opacity:.55; }
+
+  .undo-row { margin-top:16px; font-size:.93rem; color:var(--muted); }
+  .undo-row button {
+    background:none; border:none; font:inherit; font-weight:650;
+    color:var(--muted); text-decoration:underline; text-underline-offset:3px;
+    padding:10px 8px; cursor:pointer;
+  }
+
+  /* ---------- confirm panel ---------- */
+  .confirm {
+    margin-top:24px; text-align:left;
+    background:var(--warn-soft); border:1px solid var(--warn-line);
+    border-radius:18px; padding:18px;
+  }
+  .confirm p { margin:0 0 16px; font-size:1.02rem; line-height:1.45; color:var(--warn); font-weight:550; }
+  .confirm p b { font-weight:800; }
+  .confirm .btn { min-height:58px; font-size:1.08rem; }
+  .confirm .btn-ghost { margin-top:9px; }
+
+  /* ---------- history ---------- */
+  .history { margin-top:26px; padding-top:22px; border-top:1px solid var(--line); }
+  .hlabel {
+    font-size:.72rem; font-weight:700; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:14px;
+  }
+  .dots { display:flex; justify-content:space-between; gap:6px; }
+  .day { flex:1; display:flex; flex-direction:column; align-items:center; gap:8px; }
+  .dot {
+    width:19px; height:19px; border-radius:50%;
+    background:var(--idle-dot);
+  }
+  .dot.one  { background:var(--fed-dot); }
+  .dot.many { background:var(--warn-dot); box-shadow:0 0 0 4px var(--warn-soft); }
+  .dot.today { outline:2px solid var(--fg); outline-offset:3px; }
+  .dname { font-size:.74rem; font-weight:600; color:var(--muted); }
+
+  .foot { margin-top:18px; text-align:center; font-size:.78rem; color:var(--muted); opacity:.8; }
+
+  .plain { text-align:center; padding:64px 20px; color:var(--muted); }
+  .plain h1 { font-size:1.35rem; color:var(--fg); margin:0 0 10px; }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SUPABASE_URL = "https://dckgfwievtugvllxseue.supabase.co";
+  var ANON_KEY     = "sb_publishable_2h5zLJJhtaLGCrSvgyNAcQ_QLf_gOm8";
+
+  var TOKEN = new URLSearchParams(location.search).get("d");
+  var app = document.getElementById("app");
+
+  // ---- state -------------------------------------------------------------
+  // The server is the record. Nothing here is persisted; `undo` is the only
+  // purely-local concept and it is re-validated server-side anyway.
+  var S = {
+    data: null,        // last successful get_status payload
+    goodAt: 0,         // Date.now() of that success
+    skew: 0,           // server_now - device_now, ms
+    loading: true,
+    reachable: true,   // did the most recent request succeed?
+    invalid: false,    // token missing or unrecognised
+    confirming: false,
+    busy: false,
+    optimistic: null,  // ISO string of a feed we've shown but not yet confirmed
+    undo: null,        // { id, expires }
+    flash: null,       // { kind, text }
+    retries: 0
+  };
+  var retryTimer = null, tickTimer = null;
+
+  function set(patch) { for (var k in patch) S[k] = patch[k]; render(); }
+  function now() { return Date.now() + S.skew; }   // server-aligned clock
+  function tz() { return (S.data && S.data.timezone) || undefined; }
+
+  // ---- api ---------------------------------------------------------------
+  function rpc(fn, body) {
+    var ctl = new AbortController();
+    var to = setTimeout(function () { ctl.abort(); }, 9000);
+    return fetch(SUPABASE_URL + "/rest/v1/rpc/" + fn, {
+      method: "POST",
+      cache: "no-store",
+      signal: ctl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        apikey: ANON_KEY,
+        Authorization: "Bearer " + ANON_KEY
+      },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      clearTimeout(to);
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }, function (e) { clearTimeout(to); throw e; });
+  }
+
+  // Every response funnels through here so "reachable" and the clock offset
+  // are updated in exactly one place.
+  function accept(res) {
+    if (!res || res.ok !== true) { set({ invalid: true, loading: false }); return null; }
+    S.skew = new Date(res.server_now).getTime() - Date.now();
+    S.data = res;
+    S.goodAt = Date.now();
+    S.reachable = true;
+    S.retries = 0;
+    S.loading = false;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    return res;
+  }
+
+  function unreachable() {
+    S.reachable = false;
+    S.loading = false;
+    S.optimistic = null;      // never let an unconfirmed feed linger as truth
+    scheduleRetry();
+  }
+
+  function scheduleRetry() {
+    if (retryTimer) return;
+    var wait = [3000, 6000, 12000, 20000][Math.min(S.retries, 3)];
+    S.retries++;
+    retryTimer = setTimeout(function () { retryTimer = null; load(); }, wait);
+  }
+
+  function load() {
+    if (!TOKEN) { set({ invalid: true, loading: false }); return Promise.resolve(); }
+    return rpc("get_status", { p_token: TOKEN })
+      .then(function (r) { accept(r); render(); })
+      .catch(function () { unreachable(); render(); });
+  }
+
+  // ---- actions -----------------------------------------------------------
+  function feed(confirm) {
+    if (S.busy) return;
+    S.busy = true;
+    S.confirming = false;
+    S.flash = null;
+    // Optimistic: flip the answer immediately. Standing at the bowl on bad
+    // wifi shouldn't feel broken. Reverted below if the write doesn't land.
+    S.optimistic = new Date(now()).toISOString();
+    render();
+
+    rpc("record_feed", { p_token: TOKEN, p_confirm: !!confirm })
+      .then(function (res) {
+        S.busy = false;
+        S.optimistic = null;
+        if (!accept(res)) return;
+
+        if (res.action === "needs_confirm") {
+          S.confirming = true;                       // interrupt, nothing written
+        } else if (res.action === "recorded" || res.action === "deduped") {
+          // 'deduped' must look identical to a normal tap — the user
+          // double-tapped by accident and doesn't need to hear about it.
+          if (res.last_feed_id) S.undo = { id: res.last_feed_id, expires: now() + 10 * 60 * 1000 };
+        }
+        render();
+      })
+      .catch(function () {
+        S.busy = false;
+        // The write is unconfirmed, so it must not be shown as done.
+        S.flash = { kind: "err", text: "Not recorded — couldn’t reach the server." };
+        unreachable();
+        render();
+      });
+  }
+
+  function undo() {
+    if (S.busy || !S.undo) return;
+    S.busy = true; S.flash = null; render();
+    rpc("undo_feed", { p_token: TOKEN, p_event_id: S.undo.id })
+      .then(function (res) {
+        S.busy = false;
+        if (!accept(res)) return;
+        if (res.action === "undone") S.undo = null;
+        else S.flash = { kind: "muted", text: "Too late to undo that." };
+        render();
+      })
+      .catch(function () {
+        S.busy = false;
+        S.flash = { kind: "err", text: "Couldn't undo — no connection." };
+        unreachable();
+        render();
+      });
+  }
+
+  // ---- formatting --------------------------------------------------------
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function clock(iso) {
+    try {
+      return new Intl.DateTimeFormat(undefined, {
+        hour: "numeric", minute: "2-digit", timeZone: tz()
+      }).format(new Date(iso));
+    } catch (e) { return new Date(iso).toTimeString().slice(0, 5); }
+  }
+
+  function ago(iso) {
+    var m = Math.round((now() - new Date(iso).getTime()) / 60000);
+    if (m < 1) return "just now";
+    if (m === 1) return "1 minute ago";
+    if (m < 60) return m + " minutes ago";
+    var h = Math.floor(m / 60), r = m % 60;
+    if (h < 24) return h + (h === 1 ? " hour" : " hours") + (r ? " " + r + " min" : "") + " ago";
+    return Math.floor(h / 24) + " days ago";
+  }
+
+  function joinTimes(list) {
+    var t = list.map(function (f) { return clock(f.at); });
+    if (t.length <= 1) return t.join("");
+    return t.slice(0, -1).join(", ") + " and " + t[t.length - 1];
+  }
+
+  // ---- render ------------------------------------------------------------
+  function render() {
+    if (S.invalid) {
+      app.innerHTML =
+        '<div class="plain"><h1>This link isn’t valid</h1><p>Check the address and try again.</p></div>';
+      return;
+    }
+    if (S.loading && !S.data) {
+      app.innerHTML =
+        '<div class="card"><div class="dog">&nbsp;</div>' +
+        '<p class="headline is-err pulse">&hellip;</p>' +
+        '<div class="sub2" style="margin-top:16px">Checking&hellip;</div></div>';
+      return;
+    }
+
+    var d = S.data;
+    var stale = !S.reachable;
+    var html = "";
+
+    // --- optimistic overlay: treat a pending feed as one of today's feeds ---
+    var feeds = d ? d.feeds_today.slice() : [];
+    var count = d ? d.feed_count_today : 0;
+    if (S.optimistic) { feeds.push({ id: -1, at: S.optimistic }); count += 1; }
+    var lastAt = feeds.length ? feeds[feeds.length - 1].at : null;
+
+    // --- banners ---
+    if (!S.reachable) {
+      html +=
+        '<div class="banner banner-err" role="alert"><span class="ico">⚠️</span>' +
+        '<span><b>Couldn’t reach the server</b>' +
+        '<span class="sub">' +
+        (d ? "Showing the last known answer from " + esc(ago(new Date(S.goodAt + S.skew).toISOString())) + "."
+           : "No information available.") +
+        "</span></span>" +
+        '<button class="retry" id="retry">Retry</button></div>';
+    }
+    if (S.flash && S.flash.kind === "err") {
+      html += '<div class="banner banner-err" role="alert"><span class="ico">✕</span><span>' +
+              esc(S.flash.text) + "</span></div>";
+    }
+    // Something went wrong today and whoever is looking needs to know
+    // before they add a third.
+    if (S.reachable && count > 1) {
+      html += '<div class="banner banner-warn" role="alert"><span class="ico">⚠️</span>' +
+              "<span><b>Fed " + count + "× today</b>" +
+              '<span class="sub">' + esc(joinTimes(feeds)) + "</span></span></div>";
+    }
+
+    html += '<div class="card">';
+    html += '<div class="dog">' + esc(d ? d.dog_name : " ") + "</div>";
+    html += '<div class="status' + (stale ? " stale" : "") + '" aria-live="polite">';
+
+    if (!d) {
+      // No data at all + no connection. Say so. Never guess "not fed".
+      html += '<p class="headline is-err">Unknown</p>' +
+              '<div class="sub1">Can’t check right now</div>' +
+              '<div class="sub2">You’re offline or the server is down.</div>';
+    } else if (count > 1) {
+      html += '<p class="headline is-warn">Fed ' + count + "×</p>" +
+              '<div class="sub1">Last at ' + esc(clock(lastAt)) + "</div>" +
+              '<div class="sub2">' + esc(ago(lastAt)) + "</div>";
+    } else if (count === 1) {
+      html += '<p class="headline is-fed">Fed</p>' +
+              '<div class="sub1">at ' + esc(clock(lastAt)) + "</div>" +
+              '<div class="sub2">' + esc(ago(lastAt)) + "</div>";
+    } else {
+      html += '<p class="headline is-idle">Not fed</p>' +
+              '<div class="sub2" style="margin-top:12px">No feeding recorded today</div>';
+    }
+    html += "</div>"; // .status
+
+    // --- actions ---
+    html += '<div class="actions">';
+    if (!d) {
+      html += '<button class="btn btn-ghost" id="retry2">Try again</button>';
+    } else if (S.confirming) {
+      html += '<div class="confirm"><p>' + esc(d.dog_name) + " was fed at <b>" +
+              esc(clock(lastAt)) + "</b>, " + esc(ago(lastAt)) +
+              ". Record a second feeding?</p>" +
+              '<button class="btn btn-warn" id="confirm">Yes, record it</button>' +
+              '<button class="btn btn-ghost" id="cancel">Cancel</button></div>';
+    } else if (count === 0) {
+      html += '<button class="btn" id="feed"' + (S.busy ? " disabled" : "") + ">" +
+              (S.busy ? "Saving…" : "Mark as fed") + "</button>";
+    } else {
+      // Already fed. The primary action is now *nothing* — you have your
+      // answer and you walk away. So this is deliberately not button-shaped.
+      html += '<button class="linkish" id="again"' + (S.busy ? " disabled" : "") + ">" +
+              "Feed again</button>";
+    }
+
+    if (S.undo && S.undo.expires > now() && count > 0 && !S.confirming) {
+      html += '<div class="undo-row">Recorded by mistake? <button id="undo">Undo</button></div>';
+    }
+    if (S.flash && S.flash.kind === "muted") {
+      html += '<div class="undo-row">' + esc(S.flash.text) + "</div>";
+    }
+    html += "</div>"; // .actions
+
+    // --- history ---
+    if (d && d.days && d.days.length) {
+      html += '<div class="history"><div class="hlabel">Last 7 days</div><div class="dots">';
+      d.days.forEach(function (day, i) {
+        var c = day.count;
+        if (i === d.days.length - 1) c = count;          // today, incl. optimistic
+        var cls = c === 0 ? "" : (c === 1 ? " one" : " many");
+        var today = i === d.days.length - 1 ? " today" : "";
+        var name;
+        try {
+          name = new Intl.DateTimeFormat(undefined, { weekday: "narrow", timeZone: tz() })
+                   .format(new Date(day.day_start));
+        } catch (e) { name = ""; }
+        html += '<div class="day"><div class="dot' + cls + today + '"></div>' +
+                '<div class="dname">' + esc(name) + "</div></div>";
+      });
+      html += "</div></div>";
+    }
+
+    html += "</div>"; // .card
+    if (d) html += '<div class="foot">Updates automatically</div>';
+
+    app.innerHTML = html;
+
+    bind("feed",    function () { feed(false); });
+    bind("again",   function () { set({ confirming: true, flash: null }); });
+    bind("confirm", function () { feed(true); });
+    bind("cancel",  function () { set({ confirming: false }); });
+    bind("undo",    undo);
+    bind("retry",   function () { set({ loading: !S.data }); load(); });
+    bind("retry2",  function () { set({ loading: true }); load(); });
+  }
+
+  function bind(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", fn);
+  }
+
+  // ---- lifecycle ---------------------------------------------------------
+  // Nobody should ever read a cached answer: refresh whenever the phone
+  // comes back to the page, and quietly while it's open.
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) load();
+  });
+  window.addEventListener("pageshow", function (e) { if (e.persisted) load(); });
+  window.addEventListener("online", function () { S.retries = 0; load(); });
+  window.addEventListener("focus", function () {
+    if (Date.now() - S.goodAt > 30000) load();
+  });
+
+  setInterval(function () { if (!document.hidden) load(); }, 60000);
+  // Keep "20 minutes ago" honest without refetching.
+  tickTimer = setInterval(function () {
+    if (!document.hidden && S.data && !S.busy) render();
+  }, 30000);
+
+  load();
+})();
+</script>
+</body>
+</html>
