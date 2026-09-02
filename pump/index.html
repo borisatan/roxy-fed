@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f4f5f7">
+<meta name="robots" content="noindex, nofollow">
+<title>Водна помпа</title>
+<style>
+  :root {
+    --bg:#f4f5f7; --card:#fff; --fg:#101418; --muted:#5d6672; --line:#e6e8ec;
+    --ok:#15803d;   --ok-soft:#dcfce7;   --ok-dot:#22c55e;
+    --warn:#b45309; --warn-soft:#fef3c7; --warn-dot:#f59e0b; --warn-line:#fcd34d;
+    --err:#b91c1c;  --err-soft:#fee2e2;  --err-dot:#ef4444;  --err-line:#fca5a5;
+    --muted-dot:#cfd4dc;
+    --shadow:0 1px 2px rgba(16,20,24,.05), 0 10px 30px rgba(16,20,24,.07);
+  }
+
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; padding:0; }
+  body {
+    background:var(--bg); color:var(--fg);
+    font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size:18px; line-height:1.4;
+    -webkit-font-smoothing:antialiased;
+    padding:
+      calc(env(safe-area-inset-top) + 16px)
+      calc(env(safe-area-inset-right) + 14px)
+      calc(env(safe-area-inset-bottom) + 20px)
+      calc(env(safe-area-inset-left) + 14px);
+    min-height:100vh; min-height:100dvh;
+    display:flex; flex-direction:column;
+    justify-content:center;
+    justify-content:safe center;
+  }
+  #app { width:100%; max-width:460px; margin-left:auto; margin-right:auto; }
+
+  /* ---------- banners ---------- */
+  .banner {
+    display:flex; gap:12px; align-items:flex-start;
+    border-radius:18px; padding:16px 18px; margin-bottom:16px;
+    font-size:1.1rem; font-weight:650; line-height:1.3;
+  }
+  .banner .ico { font-size:1.35rem; line-height:1.1; flex:none; }
+  .banner-warn { background:var(--warn-soft); color:var(--warn); border:1.5px solid var(--warn-line); }
+  .banner-err  { background:var(--err-soft);  color:var(--err);  border:1.5px solid var(--err-line); }
+  .banner-ok   { background:var(--ok-soft);   color:var(--ok);   border:1.5px solid #a7e8bd; }
+  .banner b { font-weight:800; }
+  .banner .sub { display:block; font-weight:550; opacity:.9; margin-top:4px; font-size:1rem; }
+  .banner .retry {
+    margin-left:auto; flex:none; align-self:center;
+    background:transparent; border:1.5px solid currentColor; color:inherit;
+    border-radius:999px; padding:9px 17px; font:inherit; font-size:.95rem; font-weight:700;
+    cursor:pointer; white-space:nowrap;
+  }
+  .banner .retry:active { opacity:.6; }
+
+  /* ---------- card ---------- */
+  .card {
+    background:var(--card); border-radius:28px; box-shadow:var(--shadow);
+    padding:34px 20px 26px; text-align:center;
+  }
+  .item {
+    font-size:1rem; font-weight:800; letter-spacing:.15em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:22px;
+  }
+
+  .status { transition:opacity .18s ease; }
+  .status.stale { opacity:.45; }
+
+  /* Sized for Bulgarian: "Не е проверявана" is long and expected to wrap. */
+  .headline {
+    font-size:clamp(2.6rem, 13vw, 4.2rem); font-weight:900;
+    letter-spacing:-.04em; line-height:.98; margin:0;
+    overflow-wrap:break-word; text-wrap:balance;
+  }
+  @media (max-width: 360px) { .headline { font-size:2.3rem; } }
+
+  .headline.is-ok   { color:var(--ok); }
+  .headline.is-warn { color:var(--warn); }
+  .headline.is-err  { color:var(--err); }
+  .headline.is-idle { color:var(--muted); }
+
+  .sub1 { margin-top:18px; font-size:1.7rem; font-weight:800; letter-spacing:-.02em; }
+  .sub2 { margin-top:6px; font-size:1.2rem; font-weight:600; color:var(--muted); }
+
+  .pulse { animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+  /* ---------- cycle bar ----------
+     Three months is too long to feel. The bar is the only element that
+     shows how much of the interval is spent rather than stating it. */
+  .bar { margin-top:26px; height:12px; border-radius:999px; background:var(--line); overflow:hidden; }
+  .bar > i { display:block; height:100%; border-radius:999px; background:var(--ok-dot); transition:width .3s ease; }
+  .bar.warn > i { background:var(--warn-dot); }
+  .bar.over > i { background:var(--err-dot); }
+  .barends {
+    display:flex; justify-content:space-between; margin-top:9px;
+    font-size:.95rem; font-weight:650; color:var(--muted);
+  }
+
+  /* ---------- actions ---------- */
+  .actions { margin-top:28px; }
+  .btn {
+    display:block; width:100%; min-height:82px; padding:14px 16px;
+    border:none; border-radius:22px; cursor:pointer;
+    font:inherit; font-size:1.35rem; font-weight:800; letter-spacing:-.02em;
+    color:#fff; background:var(--ok-dot);
+    transition:transform .1s ease, opacity .15s ease;
+  }
+  .btn:active { transform:scale(.975); }
+  .btn[disabled] { opacity:.55; cursor:default; transform:none; }
+  .btn-warn { background:var(--warn-dot); }
+  .btn-err  { background:var(--err-dot); }
+  /* When nothing is due, recording a check is a rare, deliberate act rather
+     than the point of the visit. It stops looking like the main event. */
+  .btn-ghost {
+    background:transparent; color:var(--muted);
+    border:1.5px solid var(--line); min-height:66px; font-size:1.15rem; font-weight:700;
+  }
+  .btn + .btn { margin-top:10px; }
+
+  .linkish {
+    display:inline-block; margin-top:6px; padding:14px 20px;
+    background:none; border:none; cursor:pointer;
+    font:inherit; font-size:1.1rem; font-weight:600; color:var(--muted);
+    text-decoration:underline; text-decoration-color:#c9cfd8;
+    text-underline-offset:5px;
+  }
+  .linkish:active { opacity:.55; }
+
+  .undo-row { margin-top:14px; font-size:1.05rem; font-weight:600; color:var(--muted); }
+  .undo-row button {
+    background:none; border:none; font:inherit; font-weight:800;
+    color:var(--err); text-decoration:underline; text-decoration-color:var(--err-line);
+    text-underline-offset:4px; padding:12px 8px; cursor:pointer;
+  }
+  .undo-row button:active { opacity:.6; }
+
+  /* ---------- calendar ---------- */
+  .cal { margin-top:16px; padding-top:18px; border-top:1.5px solid var(--line); }
+  .cal.hot { border-top-color:var(--warn-line); }
+  .calhint { margin-top:10px; font-size:.95rem; font-weight:600; color:var(--muted); line-height:1.35; }
+  .cal.hot .calhint { color:var(--warn); font-weight:700; }
+  .calhint.done { margin-top:0; color:var(--ok); }
+  .calhint .mini {
+    background:none; border:none; font:inherit; font-size:.95rem; font-weight:700;
+    color:var(--muted); text-decoration:underline; text-underline-offset:4px;
+    padding:6px 4px; cursor:pointer;
+  }
+  .linkish.small { font-size:.98rem; padding:10px 14px; margin-top:2px; }
+
+  /* ---------- backdate panel ---------- */
+  .panel {
+    margin-top:22px; text-align:left;
+    background:#f7f8fa; border:1.5px solid var(--line);
+    border-radius:20px; padding:18px;
+  }
+  .panel label { display:block; font-size:.95rem; font-weight:800; color:var(--muted);
+                 text-transform:uppercase; letter-spacing:.08em; margin-bottom:8px; }
+  .panel input {
+    width:100%; font:inherit; font-size:1.15rem; padding:14px 14px;
+    border:1.5px solid var(--line); border-radius:14px; background:#fff; color:var(--fg);
+    margin-bottom:16px; -webkit-appearance:none;
+  }
+  .panel .btn { min-height:66px; font-size:1.2rem; }
+
+  /* ---------- history ---------- */
+  .history { margin-top:26px; padding-top:22px; border-top:1.5px solid var(--line); text-align:left; }
+  .hlabel {
+    font-size:.88rem; font-weight:800; letter-spacing:.13em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:14px;
+  }
+  .hrow { display:flex; align-items:baseline; gap:10px; padding:7px 0; }
+  .hrow .hdate { font-weight:750; }
+  .hrow .hgap { margin-left:auto; font-size:.95rem; font-weight:600; color:var(--muted); white-space:nowrap; }
+  .hrow .hnote { display:block; font-size:.98rem; font-weight:550; color:var(--muted); }
+
+  .foot { margin-top:18px; text-align:center; font-size:.9rem; font-weight:600; color:var(--muted); opacity:.75; }
+
+  .plain { text-align:center; padding:40px 20px; color:var(--muted); }
+  .plain h1 { font-size:1.9rem; font-weight:800; color:var(--fg); margin:0 0 12px; letter-spacing:-.02em; }
+  .plain p { font-size:1.15rem; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SUPABASE_URL = "https://dckgfwievtugvllxseue.supabase.co";
+  var ANON_KEY     = "sb_publishable_2h5zLJJhtaLGCrSvgyNAcQ_QLf_gOm8";
+
+  var LOCALE = "bg-BG";
+
+  var FEED_HOST = "dckgfwievtugvllxseue.supabase.co";
+  var FEED_PATH = "/functions/v1/calendar";
+
+  var TOKEN = new URLSearchParams(location.search).get("d");
+  var app = document.getElementById("app");
+
+  // ---- state -------------------------------------------------------------
+  // The server is the record, and it also computes every date shown — the
+  // phone's clock is never consulted, so a device with the wrong date cannot
+  // produce a wrong answer.
+  var S = {
+    data: null,
+    loading: true,
+    reachable: true,
+    invalid: false,
+    busy: false,
+    panel: false,        // backdate / note panel open
+    justRecorded: false, // highlights the calendar prompt for this visit
+    subscribed: false,   // this device has already subscribed to the feed
+    undoUntil: 0,        // device-clock deadline, re-validated server-side
+    flash: null,
+    retries: 0
+  };
+  var retryTimer = null;
+
+  // Not truth — the server owns that. Purely an affordance: once you've
+  // subscribed, the button stops shouting at you on every future visit.
+  var CAL_KEY = "pump.subscribed";
+  try { S.subscribed = localStorage.getItem(CAL_KEY) === "1"; } catch (e) {}
+
+  function set(patch) { for (var k in patch) S[k] = patch[k]; render(); }
+
+  // ---- api ---------------------------------------------------------------
+  function rpc(fn, body) {
+    var ctl = new AbortController();
+    var to = setTimeout(function () { ctl.abort(); }, 9000);
+    return fetch(SUPABASE_URL + "/rest/v1/rpc/" + fn, {
+      method: "POST",
+      cache: "no-store",
+      signal: ctl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        apikey: ANON_KEY,
+        Authorization: "Bearer " + ANON_KEY
+      },
+      body: JSON.stringify(body)
+    }).then(function (r) {
+      clearTimeout(to);
+      if (!r.ok) throw new Error("http " + r.status);
+      return r.json();
+    }, function (e) { clearTimeout(to); throw e; });
+  }
+
+  function accept(res) {
+    if (!res || res.ok !== true) { set({ invalid: true, loading: false }); return null; }
+    S.data = res;
+    S.reachable = true;
+    S.retries = 0;
+    S.loading = false;
+    if (res.can_undo) S.undoUntil = Date.now() + res.undo_seconds * 1000;
+    else if (!S.busy) S.undoUntil = 0;
+    if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+    return res;
+  }
+
+  function unreachable() {
+    S.reachable = false;
+    S.loading = false;
+    scheduleRetry();
+  }
+
+  function scheduleRetry() {
+    if (retryTimer) return;
+    var wait = [3000, 6000, 12000, 20000][Math.min(S.retries, 3)];
+    S.retries++;
+    retryTimer = setTimeout(function () { retryTimer = null; load(); }, wait);
+  }
+
+  function load() {
+    if (!TOKEN) { set({ invalid: true, loading: false }); return Promise.resolve(); }
+    return rpc("get_item_status", { p_token: TOKEN })
+      .then(function (r) { accept(r); render(); })
+      .catch(function () { unreachable(); render(); });
+  }
+
+  // ---- actions -----------------------------------------------------------
+  // Deliberately NOT optimistic, unlike the dog tracker. There you tap and
+  // walk away, so the answer has to flip instantly. Here the whole point of
+  // the tap is the confirmation that it was written down — showing a check
+  // that never reached the server would be the one unforgivable bug.
+  function record(on, note) {
+    if (S.busy) return;
+    set({ busy: true, flash: null });
+
+    rpc("record_check", { p_token: TOKEN, p_on: on || null, p_note: note || null })
+      .then(function (res) {
+        S.busy = false;
+        S.panel = false;
+        if (!accept(res)) return;
+
+        if (res.action === "invalid_date") {
+          S.flash = { kind: "err", text: "Невалидна дата." };
+        } else if (res.action === "recorded" || res.action === "deduped") {
+          // 'deduped' means it was already recorded for that day. The user
+          // gets the same page either way; there's nothing to warn about.
+          S.justRecorded = true;
+        }
+        render();
+      })
+      .catch(function () {
+        S.busy = false;
+        S.flash = { kind: "err", text: "Не е записано — няма връзка със сървъра." };
+        unreachable();
+        render();
+      });
+  }
+
+  function undo() {
+    // The server decides what "recent" means; this id is the row most
+    // recently entered, which is not necessarily the one with the latest
+    // date — backdating a check must stay undoable too.
+    if (S.busy || !S.data || !S.data.undo_check_id) return;
+    set({ busy: true, flash: null });
+    rpc("undo_check", { p_token: TOKEN, p_check_id: S.data.undo_check_id })
+      .then(function (res) {
+        S.busy = false;
+        if (!accept(res)) return;
+        if (res.action === "undone") { S.undoUntil = 0; S.justRecorded = false; }
+        else S.flash = { kind: "muted", text: "Твърде късно е за отмяна." };
+        render();
+      })
+      .catch(function () {
+        S.busy = false;
+        S.flash = { kind: "err", text: "Неуспешна отмяна — няма връзка." };
+        unreachable();
+        render();
+      });
+  }
+
+  // ---- formatting --------------------------------------------------------
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  // "2026-08-31" -> a local Date. Never `new Date(str)`: that parses as UTC
+  // and lands on the previous day for anyone west of Greenwich.
+  function parseDay(s) {
+    var p = String(s).split("-");
+    return new Date(+p[0], +p[1] - 1, +p[2]);
+  }
+
+  function fmtDay(s, withYear) {
+    var d = parseDay(s);
+    var opts = { day: "numeric", month: "long" };
+    if (withYear) opts.year = "numeric";
+    try { return new Intl.DateTimeFormat(LOCALE, opts).format(d); }
+    catch (e) { return s; }
+  }
+
+  // Show the year only when it isn't the current one — "30 ноември" reads
+  // better than "30 ноември 2026 г." for a date three months out.
+  function dayWithYear(s, today) {
+    return fmtDay(s, s.slice(0, 4) !== today.slice(0, 4));
+  }
+
+  function days(n) { return n === 1 ? "1 ден" : n + " дни"; }
+
+  // ---- calendar ----------------------------------------------------------
+  // Subscribing beats downloading, and not just because it's one tap: the
+  // phone re-fetches the feed by itself, so recording a check MOVES the
+  // existing reminder. There is no per-check "remember to add it" step left
+  // to forget, which was the one fragile link in the whole design.
+  function subscribe() {
+    if (!TOKEN) return;
+    try { localStorage.setItem(CAL_KEY, "1"); } catch (e) {}
+    S.subscribed = true;
+    // webcal:// is what makes iOS open Calendar directly instead of
+    // downloading a file into Files and leaving you to find it.
+    location.href = "webcal://" + FEED_HOST + FEED_PATH + "?d=" + encodeURIComponent(TOKEN);
+  }
+
+  // Fallback for anything that doesn't speak webcal:// — a single one-off
+  // event, downloaded. No token in the file: a shared or exported calendar
+  // never carries the secret.
+  function icsEscape(s) {
+    return String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;")
+                    .replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  }
+  function icsDate(s) { return String(s).replace(/-/g, ""); }
+  function icsStamp() { return new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, ""); }
+
+  function addToCalendar() {
+    var d = S.data;
+    if (!d || !d.due_on) return;
+
+    var title = "Проверка: " + d.name;
+    var end = parseDay(d.due_on);
+    end.setDate(end.getDate() + 1);                     // all-day events end exclusive
+    var endStr = end.getFullYear() +
+                 ("0" + (end.getMonth() + 1)).slice(-2) +
+                 ("0" + end.getDate()).slice(-2);
+    var uid = (self.crypto && crypto.randomUUID ? crypto.randomUUID()
+                                                : String(Date.now()) + Math.random()) + "@pump";
+
+    var lines = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//maint//pump//BG",
+      "CALSCALE:GREGORIAN",
+      "BEGIN:VEVENT",
+      "UID:" + uid,
+      "DTSTAMP:" + icsStamp(),
+      "DTSTART;VALUE=DATE:" + icsDate(d.due_on),
+      "DTEND;VALUE=DATE:" + endStr,
+      "SUMMARY:" + icsEscape(title),
+      "DESCRIPTION:" + icsEscape("Проверка на всеки " + d.interval_months + " месеца."),
+      // 09:00 a week ahead, then 09:00 on the day. An all-day event with no
+      // alarm is a note in a month view nobody opens.
+      "BEGIN:VALARM", "ACTION:DISPLAY",
+      "DESCRIPTION:" + icsEscape(title + " — след 7 дни"),
+      "TRIGGER:-P6DT15H", "END:VALARM",
+      "BEGIN:VALARM", "ACTION:DISPLAY",
+      "DESCRIPTION:" + icsEscape(title),
+      "TRIGGER;RELATED=START:PT9H", "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ];
+
+    var blob = new Blob([lines.join("\r\n") + "\r\n"],
+                        { type: "text/calendar;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = "proverka-" + icsDate(d.due_on) + ".ics";  // ASCII: iOS is fussy
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+  }
+
+  // ---- render ------------------------------------------------------------
+  function render() {
+    if (S.invalid) {
+      app.innerHTML =
+        '<div class="plain"><h1>Този линк не е валиден</h1>' +
+        "<p>Проверете адреса и опитайте отново.</p></div>";
+      return;
+    }
+    if (S.loading && !S.data) {
+      app.innerHTML =
+        '<div class="card"><div class="item">&nbsp;</div>' +
+        '<p class="headline is-idle pulse">&hellip;</p>' +
+        '<div class="sub2" style="margin-top:16px">Проверява се&hellip;</div></div>';
+      return;
+    }
+
+    var d = S.data;
+    var st = d ? d.status : null;
+    var left = d ? d.days_left : null;
+    var html = "";
+
+    // --- banners ---
+    if (!S.reachable) {
+      html +=
+        '<div class="banner banner-err" role="alert"><span class="ico">⚠️</span>' +
+        "<span><b>Няма връзка със сървъра</b>" +
+        '<span class="sub">' +
+        (d ? "Показаното е отпреди малко." : "Няма налична информация.") +
+        "</span></span>" +
+        '<button class="retry" id="retry">Опитай пак</button></div>';
+    }
+    if (S.flash && S.flash.kind === "err") {
+      html += '<div class="banner banner-err" role="alert"><span class="ico">✕</span><span>' +
+              esc(S.flash.text) + "</span></div>";
+    }
+    if (S.justRecorded && S.reachable && !S.flash) {
+      html += '<div class="banner banner-ok" role="status"><span class="ico">✓</span>' +
+              "<span><b>Записано</b></span></div>";
+    }
+
+    html += '<div class="card">';
+    html += '<div class="item">' + esc(d ? d.name : " ") + "</div>";
+    html += '<div class="status' + (!S.reachable ? " stale" : "") + '" aria-live="polite">';
+
+    if (!d) {
+      // No data and no connection. Say so. Never guess at a status.
+      html += '<p class="headline is-idle">Неизвестно</p>' +
+              '<div class="sub1">Няма как да се провери</div>' +
+              '<div class="sub2">Няма интернет или сървърът не отговаря.</div>';
+    } else if (st === "never") {
+      html += '<p class="headline is-err">Не е проверявана</p>' +
+              '<div class="sub2" style="margin-top:14px">Няма записана проверка</div>';
+    } else if (st === "overdue") {
+      html += '<p class="headline is-err">Просрочена</p>' +
+              '<div class="sub1">с ' + esc(days(-left)) + "</div>" +
+              '<div class="sub2">Трябваше на ' + esc(dayWithYear(d.due_on, d.today)) + "</div>";
+    } else if (st === "soon") {
+      html += '<p class="headline is-warn">Наближава</p>' +
+              '<div class="sub1">' + (left === 0 ? "днес" : "след " + esc(days(left))) + "</div>" +
+              '<div class="sub2">Срок: ' + esc(dayWithYear(d.due_on, d.today)) + "</div>";
+    } else {
+      html += '<p class="headline is-ok">Наред</p>' +
+              '<div class="sub1">още ' + esc(days(left)) + "</div>" +
+              '<div class="sub2">Следваща на ' + esc(dayWithYear(d.due_on, d.today)) + "</div>";
+    }
+    html += "</div>"; // .status
+
+    // --- cycle bar ---
+    if (d && d.due_on) {
+      var pct = Math.max(0, Math.min(100, (d.days_elapsed / d.cycle_days) * 100));
+      var barCls = st === "overdue" ? " over" : (st === "soon" ? " warn" : "");
+      html += '<div class="bar' + barCls + '"><i style="width:' +
+              (st === "overdue" ? 100 : pct.toFixed(1)) + '%"></i></div>' +
+              '<div class="barends"><span>' + esc(fmtDay(d.last_checked_on)) + "</span>" +
+              "<span>" + esc(fmtDay(d.due_on)) + "</span></div>";
+    }
+
+    // --- actions ---
+    html += '<div class="actions">';
+    if (!d) {
+      html += '<button class="btn btn-ghost" id="retry2">Опитай отново</button>';
+    } else if (S.panel) {
+      html += '<div class="panel">' +
+              '<label for="pdate">Дата на проверката</label>' +
+              '<input type="date" id="pdate" value="' + esc(d.today) + '" max="' + esc(d.today) + '">' +
+              '<label for="pnote">Бележка (по желание)</label>' +
+              '<input type="text" id="pnote" maxlength="200" placeholder="напр. смених филтъра">' +
+              '<button class="btn" id="psave"' + (S.busy ? " disabled" : "") + ">" +
+              (S.busy ? "Записва се…" : "Запиши") + "</button>" +
+              '<button class="btn btn-ghost" id="pcancel">Отказ</button></div>';
+    } else {
+      // The button's weight tracks urgency: dominant when something is
+      // actually due, quiet when the answer is "nothing to do".
+      var cls = st === "ok" ? "btn btn-ghost"
+              : st === "soon" ? "btn btn-warn" : "btn btn-err";
+      html += '<button class="' + cls + '" id="check"' + (S.busy ? " disabled" : "") + ">" +
+              (S.busy ? "Записва се…" : "Отбележи проверка") + "</button>";
+      html += '<button class="linkish" id="other">Друга дата или бележка</button>';
+    }
+
+    if (d && d.undo_check_id && S.undoUntil > Date.now() && !S.panel) {
+      // Name the date when it isn't today's, so undoing a mistyped
+      // backdate says what it is about to remove.
+      var what = d.undo_on && d.undo_on !== d.today
+        ? "Записано по грешка (" + esc(fmtDay(d.undo_on)) + ")?"
+        : "Записано по грешка?";
+      html += '<div class="undo-row">' + what + ' <button id="undo">Отмени</button></div>';
+    }
+    if (S.flash && S.flash.kind === "muted") {
+      html += '<div class="undo-row">' + esc(S.flash.text) + "</div>";
+    }
+    html += "</div>"; // .actions
+
+    // --- calendar ---
+    // Offered for the whole cycle, not just after a check. With no cron and
+    // no email, this button IS the reminder — so any later tap can repair a
+    // chain that was broken by skipping it once.
+    if (d && !S.panel) {
+      html += '<div class="cal' + (S.justRecorded && !S.subscribed ? " hot" : "") + '">';
+      if (S.subscribed) {
+        // Already done on this phone, and it maintains itself from here.
+        html += '<div class="calhint done">✓ Календарът е добавен — датата се обновява сама. ' +
+                '<button class="mini" id="cal">Добави пак</button></div>';
+      } else {
+        html += '<button class="btn btn-ghost" id="cal">📅 Добави в календара</button>' +
+                '<div class="calhint">' +
+                (S.justRecorded
+                  ? "Само веднъж — без това няма напомняне."
+                  : "Само веднъж. След всяка проверка датата се обновява сама.") +
+                "</div>";
+      }
+      if (d.due_on) {
+        html += '<button class="linkish small" id="calfile">или свали еднократно събитие</button>';
+      }
+      html += "</div>";
+    }
+
+    // --- history ---
+    if (d && d.history && d.history.length) {
+      html += '<div class="history"><div class="hlabel">Последни проверки</div>';
+      d.history.forEach(function (h, i) {
+        var prev = d.history[i + 1];
+        var gap = prev ? Math.round((parseDay(h.on) - parseDay(prev.on)) / 86400000) : null;
+        html += '<div class="hrow"><div><span class="hdate">' +
+                esc(fmtDay(h.on, true)) + "</span>" +
+                (h.note ? '<span class="hnote">' + esc(h.note) + "</span>" : "") +
+                "</div>" +
+                // The real interval, not the intended one: four of these in a
+                // column tell you whether "every 3 months" is actually true.
+                (gap ? '<span class="hgap">+' + esc(days(gap)) + "</span>" : "") +
+                "</div>";
+      });
+      html += "</div>";
+    }
+
+    html += "</div>"; // .card
+    if (d) html += '<div class="foot">Проверка на всеки ' + esc(d.interval_months) + " месеца</div>";
+
+    app.innerHTML = html;
+
+    bind("check",   function () { record(null, null); });
+    bind("other",   function () { set({ panel: true, flash: null }); });
+    bind("pcancel", function () { set({ panel: false }); });
+    bind("psave",   function () {
+      var dt = document.getElementById("pdate");
+      var nt = document.getElementById("pnote");
+      record(dt && dt.value ? dt.value : null, nt ? nt.value : null);
+    });
+    bind("cal",     subscribe);
+    bind("calfile", addToCalendar);
+    bind("undo",    undo);
+    bind("retry",   function () { set({ loading: !S.data }); load(); });
+    bind("retry2",  function () { set({ loading: true }); load(); });
+  }
+
+  function bind(id, fn) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener("click", fn);
+  }
+
+  // ---- lifecycle ---------------------------------------------------------
+  // No polling. The answer changes once a day at most, so a page that
+  // refetches every minute would burn battery to tell you the same thing.
+  // Refresh when the phone actually comes back to it.
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden) load();
+  });
+  window.addEventListener("pageshow", function (e) { if (e.persisted) load(); });
+  window.addEventListener("online", function () { S.retries = 0; load(); });
+
+  load();
+})();
+</script>
+</body>
+</html>
